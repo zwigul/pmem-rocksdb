@@ -1,0 +1,44 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+username=$( whoami )
+
+##
+# *** WORKLOAD CONFIGURATION ***
+recordcount=$((100*1000*1000))  # 100 M
+operationcount=$((100*1000*1000))  # 100 M
+scan_operationcount=$((10*1000*1000))  # 10 M
+field_len=100
+field_cnt=10  # value: 10*100 =~ 1 KB
+num_threads=80
+
+##
+# build
+cd ../build
+cmake --build . -- -j
+cd -
+ycsb=../build/ycsb
+
+for req_dist in "uniform" "zipfian"; do
+  # following this order: https://github.com/brianfrankcooper/YCSB/wiki/Core-Workloads#running-the-workloads
+  rm -rf /pmem/rocksdb_$username/*  # clear db
+  $ycsb \
+    --recordcount=${recordcount} \
+    --operationcount=${operationcount} \
+    --fieldlength=${field_len} \
+    --fieldcount=${field_cnt} \
+    --threads=${num_threads} \
+    --workloads="l,a,b,c,f,d" \
+    --distribution=${req_dist}
+  rm -rf /pmem/rocksdb_$username/*  # clear db
+  $ycsb \
+    --recordcount=${recordcount} \
+    --operationcount=${scan_operationcount} \
+    --fieldlength=${field_len} \
+    --fieldcount=${field_cnt} \
+    --threads=${num_threads} \
+    --workloads="l,e" \
+    --distribution=${req_dist}
+done

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+username=$( whoami )
+
+##
+# command line arguments
+ycsb_args="--num=1000000 --workloads=l,a,c"
+opt_debug="OFF"
+for arg in "$@"; do
+  if [ "${arg,,}" == "debug" ]; then
+    opt_debug="ON"
+  else
+    ycsb_args="${ycsb_args} ${arg}"
+  fi
+done
+
+##
+# build
+cd ../build
+cmake --build . -- -j
+cd -
+ycsb=../build/ycsb
+
+rm -rf /pmem/rocksdb_$username/*  # clear db
+if [ "$opt_debug" == "ON" ]; then
+  gdb $ycsb -ex "r ${ycsb_args}"  # *** DEBUG ***
+else
+  $ycsb $ycsb_args  # *** RUN ***
+fi
