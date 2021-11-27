@@ -7,7 +7,7 @@ username=$( whoami )
 
 ##
 # command line arguments
-ycsb_args="--num=1000000 --workloads=l,a,c"
+ycsb_args="--num=100000 --workloads=l,a,c"
 opt_debug="OFF"
 for arg in "$@"; do
   if [ "${arg,,}" == "debug" ]; then

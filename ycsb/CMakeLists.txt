@@ -28,6 +28,7 @@ target_include_directories(ycsb PRIVATE
   )
 target_link_libraries(ycsb
   pthread
+  stdc++fs
   numa
   rocksdb
   pmem

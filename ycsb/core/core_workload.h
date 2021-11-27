@@ -163,6 +163,19 @@ class CoreWorkload {
   std::string name_str() { return name_str_; }
   std::string distribution_str() { return distribution_str_; }
 
+  std::string filename_prefix() {
+    if (is_load_) {
+      return "load";
+    }
+    std::string prefix = "ycsb_";
+    prefix += tolower(name_str_.back());  // "ycsb_a"
+    prefix.append("-");
+    auto reqdist = distribution_str_;
+    reqdist[0] = tolower(reqdist[0]);
+    prefix.append(reqdist);  // "ycsb_a-uniform"
+    return prefix;
+  }
+
   CoreWorkload() :
       field_count_(0), read_all_fields_(false), write_all_fields_(false),
       field_len_generator_(NULL), key_generator_(NULL), key_chooser_(NULL),

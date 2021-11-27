@@ -58,9 +58,7 @@ void RocksDBClient::run() {
 
 void RocksDBClient::Load(){
 	Reset();
-	assert(request_time_ == nullptr);
 	assert(update_time_ == nullptr);
-	request_time_ = new TimeRecord(load_num_ + 1);
 	update_time_ = new TimeRecord(load_num_ + 1);
 
 	int base_coreid = 0;
@@ -104,6 +102,10 @@ void RocksDBClient::Load(){
 	std::string stat_str2;
  	db_->GetProperty("rocksdb.stats", &stat_str2);
  	printf("\n%s\n", stat_str2.c_str());
+
+  // Record results to a file
+
+  update_time_->WriteToFile(workload_proxy_->filename_prefix(), "write_latency");
 }
 
 void RocksDBClient::Work(){
@@ -202,6 +204,10 @@ void RocksDBClient::Work(){
   printf("%s %s - IOPS: %.3lf M\n", workload_proxy_->name_str().c_str(), workload_proxy_->distribution_str().c_str(), request_num_/time*1000*1000/1000/1000);
 	printf("==================================================================\n");
 	fflush(stdout);
+
+  request_time_->WriteToFile(workload_proxy_->filename_prefix(), "request_latency");
+  update_time_->WriteToFile(workload_proxy_->filename_prefix(), "write_latency");
+  read_time_->WriteToFile(workload_proxy_->filename_prefix(), "read_latency");
 }
 
 void RocksDBClient::RocksDBWorker(uint64_t num, int coreid, bool is_master){
@@ -326,7 +332,6 @@ fprintf(stderr, "load key: %s\n", key.c_str());
     td_[coreid]->write_finished++;
 	}
 	mutex_.lock();
-	request_time_->Join(&request_time);
 	update_time_->Join(&update_time);
 	wal_time_ += rocksdb::get_perf_context()->write_wal_time/1000.0;
 	wait_time_ += rocksdb::get_perf_context()->write_thread_wait_nanos/1000.0;
@@ -388,6 +393,20 @@ void RocksDBClient::PrintArgs(){
 }
 
 void RocksDBClient::perfmon_loop() {
+  char user_name[100];
+  getlogin_r(user_name, 100);
+  std::string logdir("/tmp/rocksdb_");
+  logdir.append(user_name).append("/");
+  fs::create_directories(logdir);
+
+  std::string logpath = logdir + workload_proxy_->filename_prefix() + "." + "throughput_history";
+  std::string finalpath = logpath;
+  int num = 0;
+  while (fs::exists(finalpath)) {
+    finalpath = logpath + "." + std::to_string(num++);
+  }
+  std::ofstream outfile(finalpath);
+
   auto tp_begin = std::chrono::steady_clock::now();
   auto tp_last = tp_begin;
   uint64_t total_cnt_last = 0;
@@ -421,7 +440,13 @@ void RocksDBClient::perfmon_loop() {
     write_throughput = (double) write_cnt_inc / dur;
     read_throughput = (double) read_cnt_inc / dur;
      
+#if 1
+    static char writebuf[200];
+    sprintf(writebuf, "*** timestamp: %.3lf - Throughput: %.3lf Mops/s (Write: %.3lf Mops/s, Read: %.3lf Mops/s) ***\n", timestamp, total_throughput/1000/1000, write_throughput/1000/1000, read_throughput/1000/1000);
+    outfile << writebuf;
+#else
     fprintf(stdout, "*** timestamp: %.3lf - Throughput: %.3lf Mops/s (Write: %.3lf Mops/s, Read: %.3lf Mops/s) ***\n", timestamp, total_throughput/1000/1000, write_throughput/1000/1000, read_throughput/1000/1000);
+#endif
 
     tp_last = tp_now;
     total_cnt_last = total_cnt_now;
@@ -429,6 +454,10 @@ void RocksDBClient::perfmon_loop() {
     read_cnt_last = read_cnt_now;
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
+
+  outfile.flush();
+  outfile.close();
+  fprintf(stdout, "Throughput history is written to: %s\n", finalpath.c_str());
 }
 
 }

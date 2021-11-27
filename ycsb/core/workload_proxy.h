@@ -26,6 +26,8 @@ class WorkloadProxy{
     std::string name_str() { return workload_->name_str(); }
     std::string distribution_str() { return workload_->distribution_str(); }
 
+    std::string filename_prefix() { return workload_->filename_prefix(); }
+
 		void LoadInsertArgs(std::string &key, size_t& value_len) {
 			key = workload_->NextSequenceKey();
       value_len = workload_->field_count() * workload_->field_len();

@@ -20,6 +20,10 @@
 #include "workloadwrapper.h"
 
 #include <sys/time.h>
+#include <iterator>
+#include <experimental/filesystem>
+
+namespace fs = std::experimental::filesystem::v1;
 
 namespace ycsbc{
 
@@ -140,6 +144,26 @@ class RocksDBClient{
 				}
 				return data_[(uint64_t)(size_ * f)];
 			}
+
+      void WriteToFile(const std::string& prefix, const std::string& name) {
+        char user_name[100];
+        getlogin_r(user_name, 100);
+        std::string logdir("/tmp/rocksdb_");
+        logdir.append(user_name).append("/");
+        fs::create_directories(logdir);
+
+        std::string logpath = logdir + prefix + "." + name;
+        std::string finalpath = logpath;
+        int num = 0;
+        while (fs::exists(finalpath)) {
+          finalpath = logpath + "." + std::to_string(num++);
+        }
+        std::ofstream outfile(finalpath);
+
+        std::copy(data_, data_ + size_, std::ostream_iterator<double>(outfile, "\n"));
+        outfile.close();
+        fprintf(stdout, "Latency distribution is written to: %s\n", finalpath.c_str());
+      }
 		};
 
 		TimeRecord *request_time_  = nullptr;
