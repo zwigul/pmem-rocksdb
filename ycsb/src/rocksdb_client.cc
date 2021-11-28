@@ -22,7 +22,7 @@ RocksDBClient::RocksDBClient(WorkloadProxy* workload_proxy, int num_threads,
     //write_finished(0),
     //read_finished(0) {
   for (int i = 0; i < num_threads_; i++) {
-    td_[i] = new thread_data();
+    td_[i] = (thread_data*) aligned_alloc(64, sizeof(thread_data));
   }
   if (!db_) {
     abort();
