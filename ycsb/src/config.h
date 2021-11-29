@@ -76,6 +76,8 @@ void set_default_props(utils::Properties* props) {
   props->SetProperty("scanlengthdistribution", "uniform");
 
   props->SetProperty("threadcount", "1");
+  props->SetProperty("max_write_buffer_number", "2");
+  props->SetProperty("max_background_jobs", "2");
 }
 
 void parse_command_line_arguments(int argc, char* argv[], utils::Properties* props, std::vector<char>* wl_chars) {
@@ -92,6 +94,8 @@ void parse_command_line_arguments(int argc, char* argv[], utils::Properties* pro
     { "fieldcount", required_argument, 0, 0 },
     { "recordcount", required_argument, 0, 0 },
     { "operationcount", required_argument, 0, 0 },
+    { "max_write_buffer_number", required_argument, 0, 0 },
+    { "max_background_jobs", required_argument, 0, 0 },
     { 0, 0, 0, 0 }
   };
   const static char* optstring = "n:t:w:d:";

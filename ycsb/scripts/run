@@ -13,6 +13,8 @@ scan_operationcount=$((10*1000*1000))  # 10 M
 field_len=100
 field_cnt=10  # value: 10*100 =~ 1 KB
 num_threads=80
+max_write_buffer_number=16  # 64MB * 16 = 1GB
+max_background_jobs=8
 
 ##
 # build
@@ -31,6 +33,8 @@ for req_dist in "uniform" "zipfian"; do
     --fieldcount=${field_cnt} \
     --threads=${num_threads} \
     --workloads="l,a,b,c,f,d" \
+    --max_write_buffer_number=${max_write_buffer_number} \
+    --max_background_jobs=${max_background_jobs} \
     --distribution=${req_dist}
   rm -rf /pmem/rocksdb_$username/*  # clear db
   $ycsb \
@@ -40,5 +44,7 @@ for req_dist in "uniform" "zipfian"; do
     --fieldcount=${field_cnt} \
     --threads=${num_threads} \
     --workloads="l,e" \
+    --max_write_buffer_number=${max_write_buffer_number} \
+    --max_background_jobs=${max_background_jobs} \
     --distribution=${req_dist}
 done

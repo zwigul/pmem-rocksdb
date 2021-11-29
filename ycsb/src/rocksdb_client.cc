@@ -97,7 +97,7 @@ void RocksDBClient::Load(){
 			update_time_->Tail(0.999), update_time_->Tail(0.99), update_time_->Tail(0.95),
 		    update_time_->Tail(0.90), update_time_->Tail(0.75));
 	printf("------------------------------------------------------------------\n");
-  printf("%s %s - IOPS: %.3lf M\n", workload_proxy_->name_str().c_str(), workload_proxy_->distribution_str().c_str(), load_num_/time*1000*1000/1000/1000);
+  printf("Load %c - IOPS: %.3lf M\n", workload_proxy_->name_str().back(), load_num_/time*1000*1000/1000/1000);
 	printf("==================================================================\n");
 	std::string stat_str2;
  	db_->GetProperty("rocksdb.stats", &stat_str2);

@@ -35,6 +35,8 @@ int main(int argc, char* argv[]){
 	rocksdb::Options options;
   options.wal_dir = dbpath + "/wal";
   options.create_if_missing = true;
+  options.max_write_buffer_number = std::stoi(common_props.GetProperty("max_write_buffer_number"));
+  options.max_background_jobs = std::stoi(common_props.GetProperty("max_background_jobs"));
   // *** DCPMM
   options.env = rocksdb::NewDCPMMEnv(rocksdb::DCPMMEnvOptions());
   // Key-value separation
