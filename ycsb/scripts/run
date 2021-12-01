@@ -14,7 +14,7 @@ field_len=100
 field_cnt=10  # value: 10*100 =~ 1 KB
 num_threads=80
 max_write_buffer_number=16  # 64MB * 16 = 1GB
-max_background_jobs=8
+max_background_jobs=4
 
 ##
 # build

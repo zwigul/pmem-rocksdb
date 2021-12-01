@@ -2,6 +2,8 @@
 #include "algorithm"
 #include "math.h"
 
+#include <atomic>
+
 namespace ycsbc {
 
 RocksDBClient::RocksDBClient(WorkloadProxy* workload_proxy, int num_threads,
@@ -21,9 +23,9 @@ RocksDBClient::RocksDBClient(WorkloadProxy* workload_proxy, int num_threads,
     //total_read_latency(0),
     //write_finished(0),
     //read_finished(0) {
-  for (int i = 0; i < num_threads_; i++) {
-    td_[i] = (thread_data*) aligned_alloc(64, sizeof(thread_data));
-  }
+  //for (int i = 0; i < num_threads_; i++) {
+  //  td_[i] = (thread_data*) aligned_alloc(64, sizeof(thread_data));
+  //}
   if (!db_) {
     abort();
     rocksdb::Status s = rocksdb::DB::Open(options_, data_dir_, &db_);
@@ -211,6 +213,9 @@ void RocksDBClient::Work(){
 }
 
 void RocksDBClient::RocksDBWorker(uint64_t num, int coreid, bool is_master){
+  auto mybuf = aligned_alloc(64, sizeof(thread_data));
+  memset(mybuf, 0, sizeof(thread_data));
+  td_[coreid] = (thread_data*) mybuf;
 	// SetAffinity(coreid);
 	rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTimeExceptForMutex);
 	rocksdb::get_perf_context()->Reset();
@@ -278,6 +283,8 @@ void RocksDBClient::RocksDBWorker(uint64_t num, int coreid, bool is_master){
 		//total_finished_requests_.fetch_add(1);
 	}
 
+  td_[coreid] = NULL;
+  //free(mybuf);
 	mutex_.lock();
 	request_time_->Join(&request_time);
 	read_time_->Join(&read_time);
@@ -294,6 +301,10 @@ void RocksDBClient::RocksDBWorker(uint64_t num, int coreid, bool is_master){
 }
 
 void RocksDBClient::RocksdDBLoader(uint64_t num, int coreid){
+  auto mybuf = aligned_alloc(64, sizeof(thread_data));
+  memset(mybuf, 0, sizeof(thread_data));
+  td_[coreid] = (thread_data*) mybuf;
+  memset(td_[coreid], 0, sizeof(thread_data));
 	rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTimeExceptForMutex);
 	rocksdb::get_perf_context()->Reset();
 	rocksdb::get_iostats_context()->Reset();
@@ -331,6 +342,8 @@ fprintf(stderr, "load key: %s\n", key.c_str());
     td_[coreid]->total_finished_requests++;
     td_[coreid]->write_finished++;
 	}
+  td_[coreid] = NULL;
+  //free(mybuf);
 	mutex_.lock();
 	update_time_->Join(&update_time);
 	wal_time_ += rocksdb::get_perf_context()->write_wal_time/1000.0;
@@ -353,7 +366,9 @@ void RocksDBClient::Reset(){
 	//total_finished_requests_.store(0);
 
   for (int i = 0; i < num_threads_; i++) {
-    memset(td_[i], 0, sizeof(thread_data));
+    if (td_[i]) {
+      memset(td_[i], 0, sizeof(thread_data));
+    }
   }
   stop_.store(false);
 }
@@ -429,9 +444,11 @@ void RocksDBClient::perfmon_loop() {
     uint64_t write_cnt_now = 0;
     uint64_t read_cnt_now = 0;
     for (int i = 0; i < num_threads_; i++) {
-      total_cnt_now += td_[i]->total_finished_requests;
-      write_cnt_now += td_[i]->write_finished;
-      read_cnt_now += td_[i]->read_finished;
+      if (td_[i]) {
+        total_cnt_now += td_[i]->total_finished_requests;
+        write_cnt_now += td_[i]->write_finished;
+        read_cnt_now += td_[i]->read_finished;
+      }
     }
     uint64_t total_cnt_inc = total_cnt_now - total_cnt_last;
     uint64_t write_cnt_inc = write_cnt_now - write_cnt_last;
